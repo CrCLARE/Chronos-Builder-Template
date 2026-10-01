@@ -1,93 +1,86 @@
 # Chronos-Builder-Template V2.2
 
-云端编译模板 — Fork 到私有仓库，一键生成专属 `.node` 加密文件。
+Cloud Compilation Template — Fork to a private repository to generate your dedicated `.node` encrypted file with one click.
 
-> 📌 **本仓库为 Chronos Seal 的云端编译模板仓库，仅用于 Fork 后运行 GitHub Actions。**
+> 📌 **This repository is the cloud compilation template for Chronos Seal, only used for running GitHub Actions after forking.**
 >
-> 如需提交 Issue、查看完整文档或了解项目详情，请移步主仓库：
-> [https://github.com/CLARE-XHL/Chronos-Seal](https://github.com/CLARE-XHL/Chronos-Seal)
+> For submitting Issues, viewing full documentation, or learning more about the project, please visit the main repository:
+> [https://github.com/CrCLARE/Chronos-Seal](https://github.com/CrCLARE/Chronos-Seal)
 
-> ⚠️ **本模板仅用于 RPG Maker MZ。** RPG Maker MV 采用纯 JS 轻量防护，无需云端编译，请前往主仓库获取 MV 版本。
+> ⚠️ **This template is for RPG Maker MZ only.** RPG Maker MV uses pure JS lightweight protection, requires no cloud compilation, and is available directly in the main repository.
 
+## How to Use
 
-## 使用方法
+**1. Fork this repository (must be set to Private)**
 
-**1. Fork 本仓库（必须设为私有）**
+**2. Trigger Actions**
+Actions → Build Chronos Seal → Run workflow → Fill in parameters (game name, version number)
 
-**2. 触发 Actions**
-Actions → Build Chronos Seal → Run workflow → 填写参数（游戏名称、版本号）
+> The "Deadline" parameter has been removed in V2.2 — the expiration check mechanism is deprecated. Authors only need to fill in the game name and version number.
 
-> V2.2 已移除"截止日期"参数——过期检查机制已废弃。作者只需填写游戏名称与版本号。
+**3. Download Artifacts**
+After compilation, download the artifact `chronos-seal-output-MZ` and unzip it to get:
 
-**3. 下载产物**
-编译完成后下载 artifact `chronos-seal-output-MZ`，解压得到：
+- `decryptor.node` — Place this in the root directory of your game's distribution package.
+- `encrypt_config.json` — Used during the local encryption stage. **Must be kept for the long term after the first build.**
+- `author_secret.txt` — Keep offline. **Never place it inside the game package.**
 
-- `decryptor.node` —— 放入游戏发行包根目录
-- `encrypt_config.json` —— 本地加密阶段使用，**首次构建后必须长期保存**
-- `author_secret.txt` —— 离线保存，绝对不要放进游戏包
+**4. Delete the Forked Repository After Saving Credentials**
+Delete the fork immediately after downloading to ensure logs and keys are not leaked.
 
-**4. 保存凭证后删除 Fork 仓库**
-下载后立即删除 Fork，确保日志和密钥不泄露。
+> 🔑 **Important**: `encrypt_config.json` and `author_secret.txt` contain the master seed and are the foundation for all subsequent incremental patches. **Once lost, the published game can no longer be updated.** Please be sure to back them up offline (private repository / cloud drive / offline media).
 
-> 🔑 **重要**：`encrypt_config.json` 与 `author_secret.txt` 包含主种子，是后续所有增量补丁的基础。**丢失后无法再更新已发布的游戏**，请务必离线备份（私有仓库 / 云盘 / 离线介质）。
+## Compilation Pipeline
 
+The GitHub Actions workflow in this template performs the following steps:
 
-## 编译流程说明
+1. Validate input (game name 1-64 characters, version number alphanumeric with `. _ -` only)
+2. Calculate build date
+3. Install Node.js 18.x / Python 3.10 / node-gyp 9.4.0
+4. **Generate fragmented seeds** (4 random seed segments + salt)
+5. **Generate string cipher table** (`cs_str_table.h`, used to replace plaintext tags in the binary)
+6. **Generate `build_config.h`** (Inject seeds, version number, and date as C++ compile-time constants)
+7. Compile `decryptor.node` (VS2022 x64)
+8. Generate `encrypt_config.json` and `author_secret.txt`
+9. **Triple Artifact Verification**:
+   - Artifact existence
+   - No plaintext tags in the binary
+   - Seeds correctly compiled into the binary
+10. Upload artifact
 
-本模板的 GitHub Actions 工作流执行以下步骤：
+Any verification step fails → Actions turns red directly, preventing "silent fallback to source code defaults".
 
-1. 校验输入（游戏名称 1-64 字符，版本号仅字母数字与 `. _ -`）
-2. 计算构建日期
-3. 安装 Node.js 18.x / Python 3.10 / node-gyp 9.4.0
-4. **生成分片种子**（4 段随机种子 + 盐）
-5. **生成字符串密文表**（`cs_str_table.h`，用于替换二进制中的明文 tag）
-6. **生成 `build_config.h`**（将种子、版本号、日期写入 C++ 编译期常量）
-7. 编译 `decryptor.node`（VS2022 x64）
-8. 生成 `encrypt_config.json` 与 `author_secret.txt`
-9. **三重产物校验**：
-   - 产物存在性
-   - 二进制中无明文 tag
-   - 种子已正确编入二进制
-10. 上传 artifact
+## Relationship with the Main Repository
 
-任一校验步骤失败 → Actions 直接红，防止"静默降级到源码默认值"。
+- [Chronos-Seal](https://github.com/CrCLARE/Chronos-Seal): Main repository, contains source code and complete documentation.
+- [Chronos-Builder-Template](https://github.com/CrCLARE/Chronos-Builder-Template): This repository, the cloud compilation template.
 
+## Version Compatibility
 
-## 与主仓库的关系
+- This template corresponds to **Chronos Seal V2.2**.
+- The encryption format of V2.2 is **incompatible** with V2.1. If you are upgrading from V2.1, you need to re-encrypt all assets.
+- Older version games are not affected and will continue to run normally.
 
-- [Chronos-Seal](https://github.com/CLARE-XHL/Chronos-Seal)：主仓库，含源码与完整文档
-- [Chronos-Builder-Template](https://github.com/CLARE-XHL/Chronos-Builder-Template)：本仓库，云端编译模板
+## Full Documentation
 
+For detailed usage instructions, please check: [Chronos Seal Documentation](https://docs.crclare.top)
 
-## 版本兼容
+## License
 
-- 本模板对应 **Chronos Seal V2.2**。
-- V2.2 与 V2.1 的加密格式**不兼容**。如果你是从 V2.1 升级，需要重新加密所有素材。
-- 老版本游戏不受影响，可继续正常运行。
+This project is open-sourced under the MIT License. See the [LICENSE](LICENSE) file for details.
 
+When using this software, please abide by the following conventions:
 
-## 完整文档
+- ✅ Allowed: Integrate Chronos Seal into your commercial or free games, sell your game closed-source.
+- ✅ Allowed: Modify the source code for your own projects.
+- ✅ Allowed: Distribute under the terms of the MIT License.
+- ❌ Strictly Prohibited: Selling the source code or compiled artifacts (`.node` files) of Chronos Seal as standalone commercial products.
+- ❌ Strictly Prohibited: Selling the Chronos Seal itself after removing or hiding copyright notices.
 
-详细使用说明请查看：[Chronos Seal 文档站](https://docs.crclare.top)
-
-
-## 许可证
-
-本项目采用 MIT 许可证开源，详见 [LICENSE](LICENSE) 文件。
-
-使用本软件时，请遵守以下约定：
-
-- ✅ 允许：将 Chronos Seal 集成到你的商业或免费游戏中，闭源售卖你的游戏
-- ✅ 允许：修改源码用于你自己的项目
-- ✅ 允许：在遵守 MIT 协议的前提下进行分发
-- ❌ 严禁：将 Chronos Seal 的源码或编译产物（`.node` 文件）作为独立商品直接售卖
-- ❌ 严禁：删除或隐藏版权声明后销售 Chronos Seal 本体
-
-**简单来说：你可以卖用了 Chronos Seal 的游戏，但不能直接卖 Chronos Seal 本身。**
+**In simple terms: You can sell games that use Chronos Seal, but you cannot directly sell Chronos Seal itself.**
 
 ---
 
-*本声明是对 MIT 许可证的补充说明，不改变 MIT 许可证的授权条款。*
+*This statement is a supplementary explanation to the MIT License and does not alter the authorization terms of the MIT License.*
 
-
-**⭐ 如果这个项目对你有帮助，请给主仓库一个 Star！**
+**⭐ If this project has been helpful to you, please give the main repository a Star!**
